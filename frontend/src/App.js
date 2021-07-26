@@ -17,8 +17,24 @@ function App() {
         }
         const response = await axios.post('/upload', data);
         setMessage('ipfs upload completed now uploading to blockchain');
-        var accounts = await web3.eth.getAccounts();
-        const defaultAccount = accounts[0];
+        let accounts = await web3.eth.getAccounts();
+        let defaultAccount = accounts[0];
+        //------------------------------------
+        if (!defaultAccount) {
+            const ethEnabled = async () => {
+                if (window.ethereum) {
+                    await window.ethereum.send('eth_requestAccounts');
+                    window.web3(window.ethereum);
+                    return true;
+                }
+                return false;
+            };
+            await ethEnabled();
+            accounts = await web3.eth.getAccounts();
+            defaultAccount = accounts[0];
+        }
+        //------------------------------------
+
         await verify.methods
             .addPdfLink(parseInt(id), response.data.path)
             .send({ from: defaultAccount });
