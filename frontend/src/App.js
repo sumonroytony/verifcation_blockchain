@@ -4,6 +4,7 @@ import './App.css';
 import { Container, Form } from 'react-bootstrap';
 import verify from './binance/verify';
 import web3 from './binance/web3';
+
 function App() {
     const [selectedFile, setSelectedFile] = useState([]);
     const [id, setId] = useState('');
@@ -41,7 +42,7 @@ function App() {
         setMessage('blockchain upload completed');
     };
 
-    const onClick = async () => {
+    const onClickDownload = async () => {
         const pdf = await verify.methods.getPdfLink(parseInt(id)).call();
         const config = {
             headers: {
@@ -49,7 +50,10 @@ function App() {
             },
         };
 
-        const file = await axios.post('/download', { pdf }, { config });
+        const path = await axios.post('/download', { pdf }, { config });
+        if (path.data) {
+            window.open(`download/myFile.pdf`);
+        }
     };
 
     return (
@@ -80,7 +84,7 @@ function App() {
                 value={id}
                 onChange={(e) => setId(e.target.value)}
             />
-            <button onClick={onClick}>Download</button>
+            <button onClick={onClickDownload}>Download</button>
         </Container>
     );
 }
