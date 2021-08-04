@@ -48,6 +48,7 @@ app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
 app.use(express.json());
 
 app.post('/upload', upload.array('file', 10), async (req, res, next) => {
+    //infura project id
     const PROJECTID = '1uyqqYd0iMxbMdBu3Vjeb2sSdJd';
     const PROJECTSECRET = '56296c0362cb47f2bc6c9c719cce4919';
     const auth =
@@ -68,6 +69,7 @@ app.post('/upload', upload.array('file', 10), async (req, res, next) => {
             Buffer.from(fs.readFileSync(req.files[i].path))
         );
         const finalEncryption = `${preEncryption.iv} ${preEncryption.content}`;
+
         response = await ipfs.add(finalEncryption, function (err, file) {
             if (err) {
                 console.log(err);
@@ -78,7 +80,7 @@ app.post('/upload', upload.array('file', 10), async (req, res, next) => {
 });
 
 app.post('/download', async (req, res, next) => {
-    const ipfsHash = req.body.pdf;
+    const ipfsHash = req.body.hash;
     //for decrypt
     const path = await axios.post(
         `https://ipfs.infura.io:5001/api/v0/cat?arg=${ipfsHash}`

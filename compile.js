@@ -3,13 +3,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const solc = require('solc');
 
-const buildPath = path.resolve(
-    __dirname,
-    'frontend',
-    'src',
-    'binance',
-    'build'
-);
+const buildPath = path.resolve(__dirname, 'contracts', 'build');
 fs.removeSync(buildPath);
 
 const campaignPath = path.resolve(__dirname, 'contracts', 'Verify.sol');
