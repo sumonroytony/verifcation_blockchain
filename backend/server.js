@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const multer = require('multer');
 const bodyParser = require('body-parser');
 const { create } = require('ipfs-http-client');
+const mongoose = require('mongoose');
 const fs = require('fs');
 const upload = multer({ dest: 'uploads/' });
 dotenv.config();
@@ -13,6 +14,21 @@ const mkdirp = require('mkdirp');
 const algorithm = 'aes-256-ctr';
 const secretKey = 'vOVH6sdmpNWjRRIqCc7rdxs01lwHzfr3';
 const iv = crypto.randomBytes(16);
+
+const Binance = require('./Model');
+
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log(`MongoDB connected : ${conn.connection.host}`);
+  } catch (error) {
+    console.log(error);
+  }
+};
+connectDB();
 ////hashing
 const encrypt = (text) => {
   const cipher = crypto.createCipheriv(algorithm, secretKey, iv);
@@ -47,6 +63,33 @@ app.use(bodyParser.json());
 app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
 app.use(express.json());
 
+app.post('/save', async (req, res, next) => {
+  const { ipfs, fileName, fileId, transaction } = req.body;
+  const saveToDb = await Binance.create({
+    ipfs,
+    fileName,
+    fileId,
+    transaction,
+  });
+  if (saveToDb) {
+    res.status(200).json({ saveToDb });
+  } else {
+    console.log(error);
+  }
+});
+
+app.post('/getone', async (req, res, next) => {
+  console.log(req.body);
+  const { id } = req.body;
+  const result = await Binance.findOne({ _id: id });
+  res.json(result);
+});
+
+app.get('/showlist', async (req, res, next) => {
+  const result = await Binance.find();
+  res.json(result);
+});
+
 app.post('/upload', upload.array('files', 10), async (req, res, next) => {
   //infura project id
   const PROJECTID = '1uyqqYd0iMxbMdBu3Vjeb2sSdJd';
@@ -63,23 +106,35 @@ app.post('/upload', upload.array('files', 10), async (req, res, next) => {
   });
 
   let response = [];
+  const binance = await Binance.findOne().sort({ _id: -1 }).limit(1);
+  let id = 0;
+  id = binance.fileId;
+
   for (let i = 0; i < req.files.length; i++) {
+    let obj = {};
     const preEncryption = encrypt(
       Buffer.from(fs.readFileSync(req.files[i].path))
     );
     const finalEncryption = `${preEncryption.iv} ${preEncryption.content}`;
 
-    response[i] = await ipfs.add(finalEncryption, function (err, file) {
+    obj.ipfs = await ipfs.add(finalEncryption, function (err, file) {
       if (err) {
         console.log(err);
       }
     });
+    obj.fileName = req.files[i].originalname;
+
+    id++;
+    obj.fileId = id;
+    response.push(obj);
   }
   res.send(response);
 });
 
 app.post('/download', async (req, res, next) => {
+  console.log(req.body);
   const ipfsHash = req.body.hash;
+  const fileName = req.body.fileName;
   //for decrypt
   const path = await axios.post(
     `https://ipfs.infura.io:5001/api/v0/cat?arg=${ipfsHash}`
@@ -93,12 +148,12 @@ app.post('/download', async (req, res, next) => {
 
   const decryptbuffer = decrypt(hash);
   //res.json(response);
-  fs.writeFile('frontend/public/download/myFile.pdf', decryptbuffer, (err) => {
+  fs.writeFile(`frontend/public/download/${fileName}`, decryptbuffer, (err) => {
     if (!err) console.log('Data written');
   });
   // end decrypt
   res.status(200).json({
-    path: 'frontend/public/download/myFile.pdf',
+    path: `frontend/public/download/${fileName}`,
   });
 });
 const port = process.env.PORT || 5000;
