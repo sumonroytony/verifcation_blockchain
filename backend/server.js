@@ -108,7 +108,7 @@ app.post('/upload', upload.array('files', 10), async (req, res, next) => {
   let response = [];
   const binance = await Binance.findOne().sort({ _id: -1 }).limit(1);
   let id = 0;
-  id = binance.fileId;
+  binance ? (id = binance.fileId) : (id = 0);
 
   for (let i = 0; i < req.files.length; i++) {
     let obj = {};
@@ -132,9 +132,8 @@ app.post('/upload', upload.array('files', 10), async (req, res, next) => {
 });
 
 app.post('/download', async (req, res, next) => {
-  console.log(req.body);
   const ipfsHash = req.body.hash;
-  const fileName = req.body.fileName;
+  const id = req.body.pdfId;
   //for decrypt
   const path = await axios.post(
     `https://ipfs.infura.io:5001/api/v0/cat?arg=${ipfsHash}`
@@ -148,12 +147,12 @@ app.post('/download', async (req, res, next) => {
 
   const decryptbuffer = decrypt(hash);
   //res.json(response);
-  fs.writeFile(`frontend/public/download/${fileName}`, decryptbuffer, (err) => {
+  fs.writeFile(`frontend/public/download/${id}.pdf`, decryptbuffer, (err) => {
     if (!err) console.log('Data written');
   });
   // end decrypt
   res.status(200).json({
-    path: `frontend/public/download/${fileName}`,
+    path: `frontend/public/download/${id}`,
   });
 });
 const port = process.env.PORT || 5000;

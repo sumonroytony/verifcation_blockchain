@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
-import { Container, Table } from 'react-bootstrap';
+import { Button, Container, Form, Spinner, Table } from 'react-bootstrap';
 import verify from './binance/verify';
 import web3 from './binance/web3';
 import bs58 from 'bs58';
@@ -11,12 +11,14 @@ function App() {
   const [id, setId] = useState('');
   const [message, setMessage] = useState('');
   const [result, setResult] = useState([]);
+  const [loading, setLoading] = useState('false');
 
   const showList = async () => {
+    setLoading(true);
     const { data } = await axios.get('/showlist');
     if (data) {
-      console.log(data);
       setResult(data);
+      setLoading(false);
     }
   };
 
@@ -25,7 +27,7 @@ function App() {
   }, []);
 
   const onSubmit = async (e) => {
-    setSelectedFile([]);
+    setLoading(true);
     e.preventDefault();
     if (selectedFile.length > 0) {
       setMessage('Uploading to ipfs');
@@ -92,24 +94,31 @@ function App() {
         if (v) {
           const res = await axios.post('/save', obj);
           if (res) {
-            setMessage(`file ${i} uploaded completed`);
+            showList();
+            setMessage(`file ${i + 1} uploaded completed`);
           } else {
             setMessage('something wrong!!');
           }
         }
       }
+      showList();
       setMessage('All files uploaded to blockchain');
+      setLoading(false);
     } else {
       setMessage('Please select at least 1 file');
     }
+    setSelectedFile([]);
+    setLoading(false);
   };
 
   const onClickDownload = async (productId) => {
+    setLoading(true);
     if (productId) {
       setId(productId);
     }
-    if (id) {
-      const { data } = await axios.post('/getone', { id });
+    if (id || productId) {
+      const pdfId = id ? id : productId;
+      const { data } = await axios.post('/getone', { id: pdfId });
       if (data) {
         const bytes32Hex = await verify.methods
           .getPdfLink(parseInt(data.fileId))
@@ -129,43 +138,74 @@ function App() {
             'Content-type': 'application/json',
           },
         };
-        const fileName = data.fileName;
+        const pdfId = data._id;
 
-        const path = await axios.post(
-          '/download',
-          { hash, fileName },
-          { config }
-        );
+        const path = await axios.post('/download', { hash, pdfId }, { config });
         if (path.data) {
-          window.open(`download/${fileName}`);
+          setLoading(false);
+          var a = document.createElement('a');
+          a.href = `download/${pdfId}.pdf`;
+          a.download = 'download';
+
+          a.click();
+        } else {
+          setLoading(false);
+          return '';
         }
       }
     }
+    setId('');
+    setLoading(false);
   };
 
   return (
     <Container>
       <h1>Upload files to ipfs</h1>
-      <form onSubmit={onSubmit} encType="multipart/form-data">
-        <input
-          type="file"
-          name="file"
-          onChange={(e) => setSelectedFile(e.target.files)}
-          multiple
-        />
-        <button type="submit">Submit</button>
-      </form>
+      <Form onSubmit={onSubmit} encType="multipart/form-data">
+        <Form.Group controlId="formFile" className="mb-3">
+          <Form.Control
+            type="file"
+            name="file"
+            onChange={(e) => setSelectedFile(e.target.files)}
+            multiple
+          />
+          <Button variant="primary" type="submit">
+            Submit
+          </Button>
+        </Form.Group>
+      </Form>
       {message ?? message}
       <hr />
       <h1>Download pdf</h1>
-      <input
-        type="text"
-        name="id"
-        value={id}
-        onChange={(e) => setId(e.target.value)}
-      />
-      <button onClick={() => onClickDownload}>Download</button>
+      <Form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          onClickDownload();
+        }}
+      >
+        <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
+          <Form.Label>Enter Id</Form.Label>
+          <Form.Control
+            type="text"
+            onChange={(e) => setId(e.target.value)}
+            value={id}
+          />
+        </Form.Group>
+        <Button variant="primary" type="submit">
+          Download
+        </Button>
+      </Form>
+
       <hr />
+      {loading ? (
+        <>
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </Spinner>
+        </>
+      ) : (
+        <> </>
+      )}
 
       <Table striped bordered hover variant="dark">
         <thead>
@@ -185,22 +225,26 @@ function App() {
               <td>{product.fileName}</td>
               <td>{product.transaction}</td>
               <td>
-                <i
-                  className="bi bi-download"
-                  onClick={() => onClickDownload(product._id)}
+                <button
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    onClickDownload(product._id);
+                  }}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    className="bi bi-download"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
-                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
-                  </svg>
-                </i>
+                  <i className="bi bi-download">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      className="bi bi-download"
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+                      <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
+                    </svg>
+                  </i>
+                </button>
               </td>
             </tr>
           ))}
