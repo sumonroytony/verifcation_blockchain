@@ -13,6 +13,7 @@ node_modules/
 /build
 
 # misc
+package-lock.json
 .env
 .DS_Store
 .env.local

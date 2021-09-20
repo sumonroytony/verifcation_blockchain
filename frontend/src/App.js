@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import './App.css';
-import { Button, Container, Form, Spinner, Table } from 'react-bootstrap';
-import verify from './binance/verify';
-import web3 from './binance/web3';
-import bs58 from 'bs58';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import "./App.css";
+import { Button, Container, Form, Spinner, Table } from "react-bootstrap";
+import verify from "./binance/verify";
+import web3 from "./binance/web3";
+import bs58 from "bs58";
 
 function App() {
   const [selectedFile, setSelectedFile] = useState([]);
-  const [id, setId] = useState('');
-  const [message, setMessage] = useState('');
+  const [id, setId] = useState("");
+  const [message, setMessage] = useState("");
   const [result, setResult] = useState([]);
-  const [loading, setLoading] = useState('false');
+  const [loading, setLoading] = useState("false");
 
   const showList = async () => {
     setLoading(true);
-    const { data } = await axios.get('/showlist');
+    const { data } = await axios.get("/showlist");
     if (data) {
       setResult(data);
       setLoading(false);
@@ -30,14 +30,14 @@ function App() {
     setLoading(true);
     e.preventDefault();
     if (selectedFile.length > 0) {
-      setMessage('Uploading to ipfs');
+      setMessage("Uploading to ipfs");
       const data = new FormData();
       for (const key of Object.keys(selectedFile)) {
-        data.append('files', selectedFile[key]);
+        data.append("files", selectedFile[key]);
       }
-      const response = await axios.post('/upload', data);
+      const response = await axios.post("/upload", data);
 
-      setMessage('ipfs upload completed now uploading to blockchain');
+      setMessage("ipfs upload completed now uploading to blockchain");
       console.log(response);
       let accounts = await web3.eth.getAccounts();
       let defaultAccount = accounts[0];
@@ -45,7 +45,7 @@ function App() {
       if (!defaultAccount) {
         const ethEnabled = async () => {
           if (window.ethereum) {
-            await window.ethereum.send('eth_requestAccounts');
+            await window.ethereum.send("eth_requestAccounts");
             try {
               window.web3(window.ethereum);
             } catch (error) {
@@ -70,8 +70,8 @@ function App() {
       let hash32 = [];
       for (let i = 0; i < response.data.length; i++) {
         hash32[i] =
-          '0x' +
-          bs58.decode(response.data[i].ipfs.path).slice(2).toString('hex');
+          "0x" +
+          bs58.decode(response.data[i].ipfs.path).slice(2).toString("hex");
       }
 
       // Return base58 encoded ipfs hash from bytes32 hex string,
@@ -84,28 +84,43 @@ function App() {
         obj.ipfs = hash32[i];
         obj.fileName = response.data[i].fileName;
         obj.fileId = response.data[i].fileId;
-        const v = await verify.methods
-          .addPdfLink(parseInt(obj.fileId), hash32[i])
-          .send({ from: defaultAccount })
-          .on('transactionHash', function (hash) {
-            obj.transaction = hash;
-          });
+        console.log(obj.fileId, hash32[i]);
+        let result;
+        try {
+          result = await verify.methods
+            .addPdfLink(parseInt(obj.fileId), hash32[i])
+            .send({ gas: 500000, from: defaultAccount })
+            .on("transactionHash", function (hash) {
+              obj.transaction = hash;
+            });
+        } catch (error) {
+          console.log({ error });
+        }
 
-        if (v) {
-          const res = await axios.post('/save', obj);
+        if (result) {
+          const res = await axios.post("/save", obj);
           if (res) {
             showList();
             setMessage(`file ${i + 1} uploaded completed`);
           } else {
-            setMessage('something wrong!!');
+            setMessage("something wrong!!");
           }
+
+          var amount_to_send_wei = 0.00000001 * 1000000000000000000;
+          // const result = await verify.methods
+          //   .sendViaCall(0xcff63111cc21355af269f113205df11ad446b249)
+          //   .send({
+          //     from: defaultAccount,
+          //     value: amount_to_send_wei,
+          //   });
+          // console.log(result);
         }
       }
       showList();
-      setMessage('All files uploaded to blockchain');
+      setMessage("All files uploaded to blockchain");
       setLoading(false);
     } else {
-      setMessage('Please select at least 1 file');
+      setMessage("Please select at least 1 file");
     }
     setSelectedFile([]);
     setLoading(false);
@@ -118,7 +133,7 @@ function App() {
     }
     if (id || productId) {
       const pdfId = id ? id : productId;
-      const { data } = await axios.post('/getone', { id: pdfId });
+      const { data } = await axios.post("/getone", { id: pdfId });
       if (data) {
         const bytes32Hex = await verify.methods
           .getPdfLink(parseInt(data.fileId))
@@ -128,33 +143,33 @@ function App() {
         // Add our default ipfs values for first 2 bytes:
         // function:0x12=sha2, size:0x20=256 bits
         // and cut off leading "0x"
-        const hashHex = '1220' + bytes32Hex.slice(2);
-        const hashBytes = Buffer.from(hashHex, 'hex');
+        const hashHex = "1220" + bytes32Hex.slice(2);
+        const hashBytes = Buffer.from(hashHex, "hex");
         const hash = bs58.encode(hashBytes);
 
         //----------------------------------------------
         const config = {
           headers: {
-            'Content-type': 'application/json',
+            "Content-type": "application/json",
           },
         };
         const pdfId = data._id;
 
-        const path = await axios.post('/download', { hash, pdfId }, { config });
+        const path = await axios.post("/download", { hash, pdfId }, { config });
         if (path.data) {
           setLoading(false);
-          var a = document.createElement('a');
+          var a = document.createElement("a");
           a.href = `download/${pdfId}.pdf`;
-          a.download = 'download';
+          a.download = "download";
 
           a.click();
         } else {
           setLoading(false);
-          return '';
+          return "";
         }
       }
     }
-    setId('');
+    setId("");
     setLoading(false);
   };
 
