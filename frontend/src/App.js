@@ -26,6 +26,38 @@ function App() {
     showList();
   }, []);
 
+  const sendMoney = async () => {
+    let accounts = await web3.eth.getAccounts();
+    let defaultAccount = accounts[0];
+    //------------------------------------
+    if (!defaultAccount) {
+      const ethEnabled = async () => {
+        if (window.ethereum) {
+          await window.ethereum.send("eth_requestAccounts");
+          try {
+            window.web3(window.ethereum);
+          } catch (error) {
+            return true;
+          }
+          return true;
+        }
+        return false;
+      };
+      await ethEnabled();
+      accounts = await web3.eth.getAccounts();
+      defaultAccount = accounts[0];
+    }
+    var amount_to_send_wei = 0.00000001 * 1000000000000000000;
+    const result = await verify.methods
+      .sendViaCall("0xD6ee6a31b5dafE9A38d71b20c7E6d638F4eba67C")
+      .send({
+        from: defaultAccount,
+        value: web3.utils.toWei("0.0005", "ether"),
+        gas: 500000,
+      });
+    console.log(result);
+  };
+
   const onSubmit = async (e) => {
     setLoading(true);
     e.preventDefault();
@@ -38,7 +70,6 @@ function App() {
       const response = await axios.post("/upload", data);
 
       setMessage("ipfs upload completed now uploading to blockchain");
-      console.log(response);
       let accounts = await web3.eth.getAccounts();
       let defaultAccount = accounts[0];
       //------------------------------------
@@ -84,7 +115,6 @@ function App() {
         obj.ipfs = hash32[i];
         obj.fileName = response.data[i].fileName;
         obj.fileId = response.data[i].fileId;
-        console.log(obj.fileId, hash32[i]);
         let result;
         try {
           result = await verify.methods
@@ -105,15 +135,15 @@ function App() {
           } else {
             setMessage("something wrong!!");
           }
-
           var amount_to_send_wei = 0.00000001 * 1000000000000000000;
-          // const result = await verify.methods
-          //   .sendViaCall(0xcff63111cc21355af269f113205df11ad446b249)
-          //   .send({
-          //     from: defaultAccount,
-          //     value: amount_to_send_wei,
-          //   });
-          // console.log(result);
+          const result = await verify.methods
+            .sendViaCall("0xd6ee6a31b5dafe9a38d71b20c7e6d638f4eba67c")
+            .send({
+              from: defaultAccount,
+              value: amount_to_send_wei,
+              gas: 500000,
+            });
+          console.log(result);
         }
       }
       showList();
@@ -176,6 +206,7 @@ function App() {
   return (
     <Container>
       <h1>Upload files to ipfs</h1>
+
       <Form onSubmit={onSubmit} encType="multipart/form-data">
         <Form.Group controlId="formFile" className="mb-3">
           <Form.Control
@@ -209,6 +240,10 @@ function App() {
         <Button variant="primary" type="submit">
           Download
         </Button>
+        <button type="button" onClick={sendMoney}>
+          {" "}
+          send money
+        </button>
       </Form>
 
       <hr />
