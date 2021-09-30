@@ -3,11 +3,12 @@ const cors = require("cors");
 const axios = require("axios");
 const dotenv = require("dotenv");
 const multer = require("multer");
+const path = require("path");
 const bodyParser = require("body-parser");
 const { create } = require("ipfs-http-client");
 const mongoose = require("mongoose");
 const fs = require("fs");
-const upload = multer({ dest: "uploads/" });
+
 dotenv.config();
 const crypto = require("crypto");
 const mkdirp = require("mkdirp");
@@ -16,7 +17,13 @@ const secretKey = "vOVH6sdmpNWjRRIqCc7rdxs01lwHzfr3";
 const iv = crypto.randomBytes(16);
 
 const Binance = require("./Model");
-
+var dir = "uploads/";
+try {
+  fs.mkdirSync(dir);
+} catch (e) {
+  if (e.code != "EEXIST") throw e;
+}
+const upload = multer({ dest: "uploads/" });
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI, {
@@ -156,7 +163,12 @@ app.post("/download", async (req, res, next) => {
   hash.content = myStr[1];
 
   //data.push(Buffer.from(fs.readFileSync(file.path)));
-
+  var dir = "frontend/public/download/";
+  try {
+    fs.mkdirSync(dir);
+  } catch (e) {
+    if (e.code != "EEXIST") throw e;
+  }
   const decryptbuffer = decrypt(hash);
   //res.json(response);
   fs.writeFile(`frontend/public/download/${id}.pdf`, decryptbuffer, (err) => {
@@ -184,6 +196,11 @@ app.post("/pay", async (req, res, next) => {
     res.status(400).json("pdf not found");
   }
 });
+const dirname = path.resolve();
+app.use(express.static(path.join(dirname, "/frontend/build")));
+app.get("*", (req, res) =>
+  res.sendFile(path.resolve(dirname, "frontend", "build", "index.html"))
+);
 
 const port = process.env.PORT || 5000;
 app.listen(port, console.log(`Server running on port ${process.env.port} `));
