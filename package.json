@@ -23,6 +23,7 @@
     "crypto": "^1.0.1",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
+    "find-remove": "^3.1.0",
     "fortmatic": "^2.2.1",
     "fs-extra": "^10.0.0",
     "ganache-cli": "^6.12.2",

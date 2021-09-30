@@ -7,6 +7,7 @@ const path = require("path");
 const bodyParser = require("body-parser");
 const { create } = require("ipfs-http-client");
 const mongoose = require("mongoose");
+const findRemoveSync = require("find-remove");
 const fs = require("fs");
 
 dotenv.config();
@@ -201,6 +202,11 @@ app.use(express.static(path.join(dirname, "/frontend/build")));
 app.get("*", (req, res) =>
   res.sendFile(path.resolve(dirname, "frontend", "build", "index.html"))
 );
+var result = findRemoveSync("/frontend/public/download", {
+  age: { seconds: 60 },
+  files: "*.*",
+});
+var result = findRemoveSync("/uploads", { age: { seconds: 60 }, files: "*.*" });
 
 const port = process.env.PORT || 5000;
 app.listen(port, console.log(`Server running on port ${process.env.port} `));
