@@ -1,21 +1,21 @@
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
-const dotenv = require('dotenv');
-const multer = require('multer');
-const bodyParser = require('body-parser');
-const { create } = require('ipfs-http-client');
-const mongoose = require('mongoose');
-const fs = require('fs');
-const upload = multer({ dest: 'uploads/' });
+const express = require("express");
+const cors = require("cors");
+const axios = require("axios");
+const dotenv = require("dotenv");
+const multer = require("multer");
+const bodyParser = require("body-parser");
+const { create } = require("ipfs-http-client");
+const mongoose = require("mongoose");
+const fs = require("fs");
+const upload = multer({ dest: "uploads/" });
 dotenv.config();
-const crypto = require('crypto');
-const mkdirp = require('mkdirp');
-const algorithm = 'aes-256-ctr';
-const secretKey = 'vOVH6sdmpNWjRRIqCc7rdxs01lwHzfr3';
+const crypto = require("crypto");
+const mkdirp = require("mkdirp");
+const algorithm = "aes-256-ctr";
+const secretKey = "vOVH6sdmpNWjRRIqCc7rdxs01lwHzfr3";
 const iv = crypto.randomBytes(16);
 
-const Binance = require('./Model');
+const Binance = require("./Model");
 
 const connectDB = async () => {
   try {
@@ -36,8 +36,8 @@ const encrypt = (text) => {
   const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
 
   return {
-    iv: iv.toString('hex'),
-    content: encrypted.toString('hex'),
+    iv: iv.toString("hex"),
+    content: encrypted.toString("hex"),
   };
 };
 
@@ -45,11 +45,11 @@ const decrypt = (hash) => {
   const decipher = crypto.createDecipheriv(
     algorithm,
     secretKey,
-    Buffer.from(hash.iv, 'hex')
+    Buffer.from(hash.iv, "hex")
   );
 
   const decrpyted = Buffer.concat([
-    decipher.update(Buffer.from(hash.content, 'hex')),
+    decipher.update(Buffer.from(hash.content, "hex")),
     decipher.final(),
   ]);
 
@@ -60,16 +60,25 @@ const decrypt = (hash) => {
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
+app.use(cors({ credentials: true, origin: "http://localhost:3000" }));
 app.use(express.json());
 
-app.post('/save', async (req, res, next) => {
-  const { ipfs, fileName, fileId, transaction } = req.body;
+app.post("/save", async (req, res, next) => {
+  const {
+    ipfs,
+    fileName,
+    fileId,
+    transaction,
+    paymentDone,
+    paymentTransaction,
+  } = req.body;
   const saveToDb = await Binance.create({
     ipfs,
     fileName,
     fileId,
     transaction,
+    paymentDone,
+    paymentTransaction,
   });
   if (saveToDb) {
     res.status(200).json({ saveToDb });
@@ -78,28 +87,31 @@ app.post('/save', async (req, res, next) => {
   }
 });
 
-app.post('/getone', async (req, res, next) => {
-  console.log(req.body);
+app.post("/getone", async (req, res, next) => {
   const { id } = req.body;
   const result = await Binance.findOne({ _id: id });
-  res.json(result);
+  if (result.paymentDone) {
+    res.json(result);
+  } else {
+    res.status(400).json("you have to pay first");
+  }
 });
 
-app.get('/showlist', async (req, res, next) => {
+app.get("/showlist", async (req, res, next) => {
   const result = await Binance.find();
   res.json(result);
 });
 
-app.post('/upload', upload.array('files', 10), async (req, res, next) => {
+app.post("/upload", upload.array("files", 10), async (req, res, next) => {
   //infura project id
-  const PROJECTID = '1uyqqYd0iMxbMdBu3Vjeb2sSdJd';
-  const PROJECTSECRET = '56296c0362cb47f2bc6c9c719cce4919';
+  const PROJECTID = "1uyqqYd0iMxbMdBu3Vjeb2sSdJd";
+  const PROJECTSECRET = "56296c0362cb47f2bc6c9c719cce4919";
   const auth =
-    'Basic ' + Buffer.from(PROJECTID + ':' + PROJECTSECRET).toString('base64');
+    "Basic " + Buffer.from(PROJECTID + ":" + PROJECTSECRET).toString("base64");
   const ipfs = create({
-    host: 'ipfs.infura.io',
+    host: "ipfs.infura.io",
     port: 5001,
-    protocol: 'https',
+    protocol: "https",
     headers: {
       authorization: auth,
     },
@@ -131,14 +143,14 @@ app.post('/upload', upload.array('files', 10), async (req, res, next) => {
   res.send(response);
 });
 
-app.post('/download', async (req, res, next) => {
+app.post("/download", async (req, res, next) => {
   const ipfsHash = req.body.hash;
   const id = req.body.pdfId;
   //for decrypt
   const path = await axios.post(
     `https://ipfs.infura.io:5001/api/v0/cat?arg=${ipfsHash}`
   );
-  const myStr = path.data.split(' ');
+  const myStr = path.data.split(" ");
   const hash = {};
   hash.iv = myStr[0];
   hash.content = myStr[1];
@@ -148,12 +160,30 @@ app.post('/download', async (req, res, next) => {
   const decryptbuffer = decrypt(hash);
   //res.json(response);
   fs.writeFile(`frontend/public/download/${id}.pdf`, decryptbuffer, (err) => {
-    if (!err) console.log('Data written');
+    if (!err) console.log("Data written");
   });
   // end decrypt
   res.status(200).json({
     path: `frontend/public/download/${id}`,
   });
 });
+
+app.post("/pay", async (req, res, next) => {
+  const { id, paymentDone, paymentTransaction } = req.body;
+  const pdf = await Binance.findById(id);
+  if (pdf) {
+    pdf.paymentDone = paymentDone;
+    pdf.paymentTransaction = paymentTransaction;
+    const result = await pdf.save();
+    if (result) {
+      return res.status(200).json("payment updated successfully");
+    } else {
+      return res.status(400).json("Payment not completed");
+    }
+  } else {
+    res.status(400).json("pdf not found");
+  }
+});
+
 const port = process.env.PORT || 5000;
 app.listen(port, console.log(`Server running on port ${process.env.port} `));

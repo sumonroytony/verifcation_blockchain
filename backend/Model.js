@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const binanceSchema = mongoose.Schema(
   {
     transaction: {
@@ -13,6 +13,12 @@ const binanceSchema = mongoose.Schema(
     fileId: {
       type: Number,
     },
+    paymentDone: {
+      type: Boolean,
+    },
+    paymentTransaction: {
+      type: String,
+    },
   },
 
   {
@@ -20,4 +26,4 @@ const binanceSchema = mongoose.Schema(
   }
 );
 
-module.exports = Binance = mongoose.model('binance', binanceSchema);
+module.exports = Binance = mongoose.model("binance", binanceSchema);
