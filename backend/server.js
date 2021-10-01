@@ -16,7 +16,7 @@ const mkdirp = require("mkdirp");
 const algorithm = "aes-256-ctr";
 const secretKey = "vOVH6sdmpNWjRRIqCc7rdxs01lwHzfr3";
 const iv = crypto.randomBytes(16);
-
+const dirname = path.resolve();
 const Binance = require("./Model");
 var dir = "uploads/";
 try {
@@ -111,6 +111,14 @@ app.get("/showlist", async (req, res, next) => {
 });
 
 app.post("/upload", upload.array("files", 10), async (req, res, next) => {
+  try {
+    findRemoveSync(path.join(dirname, "/uploads"), {
+      age: { seconds: 10 },
+      files: "*.*",
+    });
+  } catch (error) {
+    console.log(error);
+  }
   //infura project id
   const PROJECTID = "1uyqqYd0iMxbMdBu3Vjeb2sSdJd";
   const PROJECTSECRET = "56296c0362cb47f2bc6c9c719cce4919";
@@ -152,6 +160,20 @@ app.post("/upload", upload.array("files", 10), async (req, res, next) => {
 });
 
 app.post("/download", async (req, res, next) => {
+  try {
+    findRemoveSync(`${dirname}/frontend/build/download`, {
+      age: { seconds: 10 },
+      files: "*.*",
+    });
+  } catch (error) {
+    console.log(error);
+  }
+  var dir = "frontend/public/download/";
+  try {
+    fs.mkdirSync(dir);
+  } catch (e) {
+    if (e.code != "EEXIST") throw e;
+  }
   const ipfsHash = req.body.hash;
   const id = req.body.pdfId;
   //for decrypt
@@ -172,12 +194,12 @@ app.post("/download", async (req, res, next) => {
   }
   const decryptbuffer = decrypt(hash);
   //res.json(response);
-  fs.writeFile(`frontend/public/download/${id}.pdf`, decryptbuffer, (err) => {
+  fs.writeFile(`frontend/build/download/${id}.pdf`, decryptbuffer, (err) => {
     if (!err) console.log("Data written");
   });
   // end decrypt
   res.status(200).json({
-    path: `frontend/public/download/${id}`,
+    path: `frontend/build/download/${id}`,
   });
 });
 
@@ -197,16 +219,11 @@ app.post("/pay", async (req, res, next) => {
     res.status(400).json("pdf not found");
   }
 });
-const dirname = path.resolve();
+
 app.use(express.static(path.join(dirname, "/frontend/build")));
 app.get("*", (req, res) =>
   res.sendFile(path.resolve(dirname, "frontend", "build", "index.html"))
 );
-var result = findRemoveSync("/frontend/public/download", {
-  age: { seconds: 60 },
-  files: "*.*",
-});
-var result = findRemoveSync("/uploads", { age: { seconds: 60 }, files: "*.*" });
 
 const port = process.env.PORT || 5000;
 app.listen(port, console.log(`Server running on port ${process.env.port} `));

@@ -181,7 +181,7 @@ function App() {
           if (path.data) {
             setLoading(false);
             var a = document.createElement("a");
-            a.href = `download/${pdfId}.pdf`;
+            a.href = `/download/${pdfId}.pdf`;
             a.download = "download";
 
             a.click();
@@ -265,6 +265,7 @@ function App() {
           <Form.Control
             type="file"
             name="file"
+            value={selectedFile}
             onChange={(e) => setSelectedFile(e.target.files)}
             multiple
           />
