@@ -98,6 +98,7 @@ function App() {
         }
 
         if (result) {
+          setLoading(true);
           showList();
           toast.success(`file ${i + 1} uploaded completed`);
           try {
@@ -264,7 +265,6 @@ function App() {
           <Form.Control
             type="file"
             name="file"
-            value={selectedFile}
             onChange={(e) => setSelectedFile(e.target.files)}
             multiple
           />
