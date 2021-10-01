@@ -186,7 +186,7 @@ app.post("/download", async (req, res, next) => {
   hash.content = myStr[1];
 
   //data.push(Buffer.from(fs.readFileSync(file.path)));
-  var dir = "frontend/public/download/";
+  var dir = "frontend/build/download";
   try {
     fs.mkdirSync(dir);
   } catch (e) {

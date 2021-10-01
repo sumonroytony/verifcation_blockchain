@@ -183,6 +183,7 @@ function App() {
             var a = document.createElement("a");
             a.href = `/download/${pdfId}.pdf`;
             a.download = "download";
+            toast.success(`${a.href}`);
 
             a.click();
           } else {
