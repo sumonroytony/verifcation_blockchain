@@ -22,6 +22,7 @@ function App() {
       setResult(data);
       setLoading(false);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
