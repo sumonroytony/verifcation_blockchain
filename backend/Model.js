@@ -9,7 +9,7 @@ const binanceSchema = mongoose.Schema(
       type: "string",
       required: false,
     },
-    blockchainFileId: {
+    blockChainFileId: {
       type: "string",
       required: false,
     },
