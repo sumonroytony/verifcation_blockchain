@@ -2,22 +2,20 @@ const mongoose = require("mongoose");
 const binanceSchema = mongoose.Schema(
   {
     transaction: {
-      type: String,
-    },
-    ipfs: {
-      type: String,
+      type: "string",
+      required: false,
     },
     fileName: {
-      type: String,
+      type: "string",
+      required: false,
     },
-    fileId: {
-      type: Number,
+    blockchainFileId: {
+      type: "string",
+      required: false,
     },
-    paymentDone: {
-      type: Boolean,
-    },
-    paymentTransaction: {
-      type: String,
+    mainFileId: {
+      type: "string",
+      required: false,
     },
   },
 
